@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(unzip -l \"Telegram Post's Parser.zip\")",
+      "Bash(unzip -q \"Telegram Post's Parser.zip\")",
+      "Bash(zip -r \"Telegram Post's Parser.zip\" \"Telegram Post's Parser/\")"
+    ]
+  }
+}
