@@ -1,0 +1,160 @@
+{
+  "policy_name": "Telegram Review Cleanup Policy",
+  "version": "1.0",
+  "last_updated": "2026-04-20",
+  
+  "temporary_files": {
+    "enabled": true,
+    "description": "Очищення тимчасових файлів",
+    "paths": [
+      "./temp/*",
+      "./cache/*",
+      "./logs/*.tmp",
+      "./*.bak",
+      "./*.tmp"
+    ],
+    "retention_days": 1,
+    "cleanup_schedule": "0 */6 * * *",
+    "exclude_patterns": [
+      "*.pid",
+      "*.lock",
+      "*.session"
+    ],
+    "max_total_size_mb": 1000,
+    "action_on_exceed": "delete_oldest"
+  },
+  
+  "media_files": {
+    "enabled": true,
+    "description": "Управління медіа файлами",
+    "path": "./photos",
+    "retention_days": 7,
+    "max_size_gb": 10,
+    "cleanup_strategy": "oldest_first",
+    "preserve_published": true,
+    "preserve_patterns": [
+      "*_featured.*",
+      "*_thumbnail.*"
+    ],
+    "compression_enabled": false,
+    "compression_quality": 80
+  },
+  
+  "data_files": {
+    "enabled": true,
+    "description": "Управління JSON файлами даних",
+    "files": [
+      {
+        "path": "./posts.json",
+        "retention_days": 3,
+        "archive_before_delete": true,
+        "max_size_mb": 50,
+        "compression_enabled": true
+      },
+      {
+        "path": "./posts_reviewed.json",
+        "retention_days": 30,
+        "archive_before_delete": true,
+        "max_size_mb": 100,
+        "compression_enabled": true
+      },
+      {
+        "path": "./last_seen.json",
+        "retention_days": 7,
+        "archive_before_delete": false,
+        "max_size_mb": 1
+      }
+    ],
+    "archive_path": "./archives",
+    "archive_format": "zip",
+    "cleanup_schedule": "0 2 * * *"
+  },
+  
+  "log_files": {
+    "enabled": true,
+    "description": "Управління лог файлами",
+    "paths": [
+      "./*.log",
+      "./logs/*.log"
+    ],
+    "retention_days": 30,
+    "max_total_size_mb": 500,
+    "rotation": {
+      "enabled": true,
+      "max_size_mb": 10,
+      "backup_count": 5
+    },
+    "compression_enabled": true,
+    "cleanup_schedule": "0 1 * * *"
+  },
+  
+  "telegram_session": {
+    "enabled": true,
+    "description": "Управління файлами сесії Telegram",
+    "session_files": [
+      "*.session",
+      "*.session-journal"
+    ],
+    "cleanup_on_error": true,
+    "max_session_age_days": 30,
+    "backup_before_cleanup": true,
+    "backup_path": "./session_backups"
+  },
+  
+  "backup_files": {
+    "enabled": true,
+    "description": "Управління backup файлами",
+    "path": "./backups",
+    "retention_days": 90,
+    "max_total_size_gb": 20,
+    "cleanup_strategy": "oldest_first",
+    "keep_daily_for_days": 7,
+    "keep_weekly_for_weeks": 4,
+    "keep_monthly_for_months": 12,
+    "cleanup_schedule": "0 5 * * *"
+  },
+  
+  "monitoring": {
+    "enable_metrics": true,
+    "metrics_retention_days": 90,
+    "enable_cleanup_reports": true,
+    "report_format": "json",
+    "report_path": "./cleanup_reports",
+    "report_retention_days": 30,
+    "enable_alerts": false,
+    "alert_on_errors": true,
+    "alert_on_warnings": false
+  },
+  
+  "safety_checks": {
+    "dry_run_first": true,
+    "confirmation_required": false,
+    "minimum_free_space_gb": 1,
+    "stop_on_low_space": true,
+    "exclude_current_day": true,
+    "backup_before_delete": true,
+    "verification_enabled": true
+  },
+  
+  "notifications": {
+    "enabled": false,
+    "on_success": false,
+    "on_warning": true,
+    "on_error": true,
+    "channels": [
+      {
+        "type": "log",
+        "level": "INFO"
+      }
+    ]
+  },
+  
+  "execution": {
+    "cleanup_script": "python cleanup.py",
+    "timeout_seconds": 3600,
+    "max_retries": 3,
+    "retry_delay_seconds": 60,
+    "parallel_processing": false,
+    "max_parallel_jobs": 1
+  }
+}
