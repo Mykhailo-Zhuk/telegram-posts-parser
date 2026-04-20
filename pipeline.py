@@ -98,29 +98,29 @@ class TelegramReviewPipeline:
             return False
     
     async def summarize_posts(self) -> bool:
-        """Виконує AI узагальнення постів"""
-        logger.info("🧠 Запуск AI узагальнення постів...")
+        """Виконує AI узагальнення постів через Ollama"""
+        logger.info("🧠 Запуск AI узагальнення постів через Ollama...")
         
         try:
-            # Імпортуємо summarize модуль
-            import summarize
+            # Імпортуємо summarize_ollama модуль
+            import summarize_ollama
             
-            # Запускаємо summarize
-            summarize.main()
+            # Запускаємо summarize_ollama
+            summarize_ollama.main()
             
             # Перевіряємо результат
             if os.path.exists(self.processed_posts_file):
                 with open(self.processed_posts_file, 'r', encoding='utf-8') as f:
                     posts = json.load(f)
                     self.stats["posts_summarized"] = len(posts)
-                    logger.info(f"✅ Узагальнено {len(posts)} постів")
+                    logger.info(f"✅ Узагальнено {len(posts)} постів через Ollama")
                     return True
             else:
                 logger.warning("❌ Файл posts_reviewed.json не створено")
                 return False
                 
         except Exception as e:
-            logger.error(f"❌ Помилка узагальнення постів: {e}")
+            logger.error(f"❌ Помилка узагальнення постів через Ollama: {e}")
             self.stats["errors"] += 1
             return False
     
