@@ -24,14 +24,18 @@ import argparse
 import asyncio
 import json
 import os
+from dotenv import load_dotenv
 from datetime import datetime, timezone
 
 from telethon import TelegramClient
 from telethon.tl.types import MessageMediaPhoto
 
+load_dotenv()
+
 # ─── Конфігурація ────────────────────────────────────────────────
 API_ID   = int(os.getenv("TG_API_ID", "0"))
 API_HASH = os.getenv("TG_API_HASH", "")
+print(f"🔑 API_ID: {API_ID} | API_HASH: {'*' * len(API_HASH)}")
 
 CONFIG_FILE    = "config.json"
 LAST_SEEN_FILE = "last_seen.json"   # { "channel_id": last_processed_message_id }
@@ -144,8 +148,8 @@ async def fetch_posts(
             limit=fetch_limit,
             min_id=min_id,          # Telethon повертає id > min_id
         ):
-            # Отримуємо текст: спочатку message.text, потім message.caption (для медіа)
-            post_text = message.text or message.caption or ""
+            # Отримуємо текст: спочатку message.text, потім message.message (для медіа)
+            post_text = message.text or message.message or ""
 
             # Пропускаємо повідомлення без текстового вмісту та медіа
             if not post_text and not message.media:

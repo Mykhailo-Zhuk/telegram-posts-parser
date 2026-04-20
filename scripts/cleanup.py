@@ -412,10 +412,6 @@ class CleanupManager:
             "disk_space": self.get_disk_usage(),
             "dry_run": self.policy.get("safety_checks", {}).get("dry_run_first", False)
         }
-#!/usr/bin/env python3
-"""
-Продовження cleanup.py
-"""
 
     def get_disk_usage(self):
         """Отримує інформацію про використання диска"""

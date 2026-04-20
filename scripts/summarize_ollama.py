@@ -18,12 +18,20 @@ import json
 import os
 import time
 import requests
+try:
+    from dotenv import load_dotenv
+except Exception:
+    # dotenv is optional; if missing, define a noop loader
+    def load_dotenv():
+        return None
 from typing import Dict, List, Optional
 
+load_dotenv()
+
 # ─── Конфігурація ────────────────────────────────────────────────
-OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY", "16aac302973f45dd922623b53f394a58.Rmqhv1CYSa1i2gQv8YupO2mr")
+OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY", "")  # Якщо використовуєш Ollama Cloud, вкажи API ключ. Для локального Ollama не потрібен.
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/api")  # Локальний Ollama за замовчуванням
-MODEL = os.getenv("OLLAMA_MODEL", "qwen3.5:cloud")  # Qwen 3.5 Cloud версія
+MODEL = os.getenv("OLLAMA_MODEL", "")  # Qwen 3.5 Cloud версія
 INPUT_FILE = "posts.json"
 OUTPUT_FILE = "posts_reviewed.json"
 MAX_TEXT_CHARS = 3000   # обрізаємо дуже довгі пости
@@ -50,12 +58,12 @@ class OllamaClient:
         self.base_url = base_url or OLLAMA_BASE_URL
         self.api_key = api_key or OLLAMA_API_KEY
         self.model = model or MODEL
-        
+        # Локальний URL на випадок fallback
+        self._local_base = "http://localhost:11434/api"
+
         # Для локального Ollama API ключ не потрібен
         if "localhost" in self.base_url or "127.0.0.1" in self.base_url:
-            self.headers = {
-                "Content-Type": "application/json"
-            }
+            self.headers = {"Content-Type": "application/json"}
         else:
             self.headers = {
                 "Content-Type": "application/json",
@@ -63,12 +71,44 @@ class OllamaClient:
             }
             # Видаляємо None заголовки
             self.headers = {k: v for k, v in self.headers.items() if v is not None}
+
+    def _request(self, method: str, path: str, retries: int = 1, **kwargs):
+        """Centralized request helper with a fallback to local Ollama on connection errors."""
+        # Нормалізуємо URL
+        def build_url(base, p):
+            return f"{base.rstrip('/')}/{p.lstrip('/')}"
+
+        attempt = 0
+        last_exc = None
+        while attempt <= retries:
+            url = build_url(self.base_url, path)
+            try:
+                resp = requests.request(method, url, headers=self.headers, timeout=TIMEOUT_SECONDS, **kwargs)
+                return resp
+            except requests.exceptions.RequestException as e:
+                last_exc = e
+                # Якщо це проблеми з хостом/доменом і ще не пробували локальний — спробуємо fallback
+                if self.base_url != self._local_base:
+                    print(f"⚠️  Не вдалося підключитися до {self.base_url}: {e}")
+                    print("⚠️  Спроба fallback: перевіряю локальний Ollama на http://localhost:11434")
+                    # переключаємось на локальний і оновлюємо заголовки
+                    self.base_url = self._local_base
+                    # Локальний може вимагати авторизацію, якщо так налаштовано — залишаємо ключ
+                    self.headers = {"Content-Type": "application/json"}
+                    if self.api_key:
+                        self.headers["Authorization"] = f"Bearer {self.api_key}"
+                    attempt += 1
+                    continue
+                else:
+                    # якщо вже на локальному і все одно помилка — ламаємося
+                    raise
+        # Якщо тут — викинемо останнє виняток
+        if last_exc:
+            raise last_exc
     
     def generate(self, prompt: str, system_prompt: str = None) -> Optional[str]:
         """Генерує текст за допомогою Ollama"""
         try:
-            url = f"{self.base_url}/generate"
-            
             payload = {
                 "model": self.model,
                 "prompt": prompt,
@@ -79,20 +119,16 @@ class OllamaClient:
                     "max_tokens": 300
                 }
             }
-            
+
             if system_prompt:
                 payload["system"] = system_prompt
-            
-            response = requests.post(
-                url,
-                headers=self.headers,
-                json=payload,
-                timeout=TIMEOUT_SECONDS
-            )
-            
+
+            response = self._request("POST", "generate", json=payload)
+
             if response.status_code == 200:
                 result = response.json()
-                return result.get("response", "").strip()
+                # Різні версії Ollama можуть повертати поле 'response' або 'output'
+                return (result.get("response") or result.get("output") or "").strip()
             else:
                 print(f"❌ Помилка Ollama API: {response.status_code} - {response.text}")
                 return None
@@ -110,13 +146,12 @@ class OllamaClient:
     def check_available_models(self) -> List[str]:
         """Перевіряє доступні моделі"""
         try:
-            url = f"{self.base_url}/tags"
-            response = requests.get(url, headers=self.headers, timeout=10)
-            
+            response = self._request("GET", "tags", retries=1)
+
             if response.status_code == 200:
                 data = response.json()
-                models = [model["name"] for model in data.get("models", [])]
-                return models
+                models = [model.get("name") for model in data.get("models", [])]
+                return [m for m in models if m]
             else:
                 print(f"❌ Не вдалося отримати список моделей: {response.status_code}")
                 return []
