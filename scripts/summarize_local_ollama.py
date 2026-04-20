@@ -12,7 +12,7 @@ from typing import Dict, List, Optional
 
 # ─── Конфігурація ────────────────────────────────────────────────
 OLLAMA_BASE_URL = "http://localhost:11434/api"  # Локальний Ollama
-MODEL = "llama3.2:latest"  # Або mistral, codellama, phi тощо
+MODEL = "qwen2.5:latest"  # Qwen 2.5 для локального використання
 INPUT_FILE = "posts.json"
 OUTPUT_FILE = "posts_reviewed.json"
 MAX_TEXT_CHARS = 3000

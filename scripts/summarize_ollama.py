@@ -23,7 +23,7 @@ from typing import Dict, List, Optional
 # ─── Конфігурація ────────────────────────────────────────────────
 OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY", "16aac302973f45dd922623b53f394a58.Rmqhv1CYSa1i2gQv8YupO2mr")
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/api")  # Локальний Ollama за замовчуванням
-MODEL = os.getenv("OLLAMA_MODEL", "llama3.2:latest")  # Або mistral, codellama, phi тощо
+MODEL = os.getenv("OLLAMA_MODEL", "qwen3.5:cloud")  # Qwen 3.5 Cloud версія
 INPUT_FILE = "posts.json"
 OUTPUT_FILE = "posts_reviewed.json"
 MAX_TEXT_CHARS = 3000   # обрізаємо дуже довгі пости
