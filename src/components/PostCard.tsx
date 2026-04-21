@@ -54,7 +54,7 @@ export const PostCard: FC<PostCardProps> = ({ post, index, onMarkRead }) => {
         />
       )}
 
-      {/* Photo */}
+      {/* Media (photo or video) */}
       {post.photo && !imgError && (
         <div
           style={{
@@ -63,18 +63,34 @@ export const PostCard: FC<PostCardProps> = ({ post, index, onMarkRead }) => {
             overflow: "hidden",
           }}
         >
-          <img
-            src={post.photo}
-            alt=""
-            onError={() => setImgError(true)}
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              display: "block",
-              filter: "brightness(0.88) saturate(0.8)",
-            }}
-          />
+          {/* If file looks like a video, render <video> */}
+          {/(\.mp4|\.webm|\.mov)$/i.test(post.photo) ? (
+            <video
+              src={post.photo}
+              controls
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                display: "block",
+                background: "#000",
+              }}
+            />
+          ) : (
+            <img
+              src={post.photo}
+              alt=""
+              onError={() => setImgError(true)}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                display: "block",
+                filter: "brightness(0.88) saturate(0.8)",
+              }}
+            />
+          )}
+
           <div
             style={{
               position: "absolute",

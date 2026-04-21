@@ -24,7 +24,12 @@ import argparse
 import asyncio
 import json
 import os
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+except Exception:
+    # dotenv is optional when environment variables are set externally
+    def load_dotenv(*args, **kwargs):
+        return None
 from datetime import datetime, timezone
 
 from telethon import TelegramClient
@@ -148,8 +153,21 @@ async def fetch_posts(
             limit=fetch_limit,
             min_id=min_id,          # Telethon повертає id > min_id
         ):
-            # Отримуємо текст: спочатку message.text, потім message.message (для медіа)
-            post_text = message.text or message.message or ""
+            # Отримуємо текст: пріоритет — message.text, message.message, message.caption
+            # Різні версії Telethon використовують різні властивості для підписів медіа
+            post_text = (
+                getattr(message, "text", None)
+                or getattr(message, "message", None)
+                or getattr(message, "caption", None)
+                or ""
+            )
+            # Нормалізуємо рядок
+            if isinstance(post_text, bytes):
+                try:
+                    post_text = post_text.decode("utf-8")
+                except Exception:
+                    post_text = str(post_text)
+            post_text = post_text or ""
 
             # Пропускаємо повідомлення без текстового вмісту та медіа
             if not post_text and not message.media:
@@ -249,15 +267,19 @@ async def fetch_posts(
             print("   (немає нових постів з моменту останнього запуску)")
 
 
-def main():
+def parse_args(argv=None):
     parser = argparse.ArgumentParser(description="Telegram Post Fetcher")
     parser.add_argument("--all",        action="store_true", help="Завантажити всі пості (ігнорувати last_seen)")
     parser.add_argument("--channel",    type=int, default=None, help="Індекс каналу з config.json (починаючи з 0)")
     parser.add_argument("--list",       action="store_true", help="Показати список каналів з config.json")
     parser.add_argument("--from-date",  type=str, default=None, help="Завантажити пості від конкретної дати (формати: 2026-03-23, 23.03.2026, 23/03/2026)")
     parser.add_argument("--limit",      type=int, default=None, help="Максимальна кількість постів для завантаження (за замовчуванням з config.json)")
-    args = parser.parse_args()
+    return parser.parse_args(argv)
 
+
+async def main(args):
+    """Async entrypoint used by other modules (expects argparse.Namespace)."""
+    # Перевірка ключів
     if not API_ID or not API_HASH:
         print("❌ Вкажи TG_API_ID та TG_API_HASH у змінних середовища")
         return
@@ -281,7 +303,7 @@ def main():
 
     # Парсимо дату якщо вказано
     from_date = None
-    if args.from_date:
+    if getattr(args, "from_date", None):
         try:
             from_date = parse_date(args.from_date)
             print(f"📅 Дата фільтрації: {from_date.strftime('%d.%m.%Y %H:%M:%S UTC')}")
@@ -289,15 +311,14 @@ def main():
             print(f"❌ Помилка: {e}")
             return
 
-    asyncio.run(
-        fetch_posts(
-            channels[idx],
-            fetch_all=args.all,
-            from_date=from_date,
-            limit_posts=args.limit,
-        )
+    await fetch_posts(
+        channels[idx],
+        fetch_all=getattr(args, "all", False),
+        from_date=from_date,
+        limit_posts=getattr(args, "limit", None),
     )
 
 
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    asyncio.run(main(args))
